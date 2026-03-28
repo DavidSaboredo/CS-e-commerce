@@ -50,8 +50,10 @@ export const getMaxStock = (product) => {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 9999;
 };
 
-export const getQuantityInCart = (productId, cart) =>
-  cart.find((item) => item.id === productId)?.quantity || 0;
+export const getQuantityInCart = (productId, cart = []) => {
+  if (!Array.isArray(cart)) return 0;
+  return cart.find((item) => item.id === productId)?.quantity || 0;
+};
 
 export const getCartQuantity = (cart) =>
   cart.reduce((total, item) => total + item.quantity, 0);

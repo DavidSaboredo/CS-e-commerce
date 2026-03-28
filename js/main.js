@@ -175,7 +175,7 @@ const renderProducts = () => {
         : `<span>${product.mediaLabel}</span>`;
 
       const maxStock = getMaxStock(product);
-      const inCart = getQuantityInCart(product.id);
+      const inCart = getQuantityInCart(product.id, cart);
       const soldOut = maxStock <= 0;
       const lowStock = !soldOut && maxStock <= 5;
       const limitReached = inCart >= maxStock;

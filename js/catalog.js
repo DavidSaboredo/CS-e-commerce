@@ -294,7 +294,7 @@ const renderCatalog = () => {
         : `<span>${product.mediaLabel}</span>`;
 
       const maxStock = getMaxStock(product);
-      const inCart = getQuantityInCart(product.id);
+      const inCart = getQuantityInCart(product.id, cart);
       const lowStock = maxStock > 0 && maxStock <= 5;
       const soldOut = maxStock <= 0;
       const limitReached = inCart >= maxStock;
