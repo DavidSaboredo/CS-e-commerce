@@ -1,5 +1,5 @@
 // Funciones utilitarias compartidas entre main.js y catalog.js
-import { STORAGE_KEY } from "./config.js";
+import { BRAND_NAME, STORAGE_KEY } from "./config.js";
 
 export const formatCurrency = (value) =>
   new Intl.NumberFormat("es-AR", {
@@ -90,6 +90,51 @@ export const updateCartBadge = (cartCount, cart) => {
   cartCount.textContent = String(getCartQuantity(cart));
 };
 
+const normalizeProductId = (value) => {
+  const numericId = Number.parseInt(String(value ?? ""), 10);
+  return Number.isFinite(numericId) ? numericId : String(value ?? "");
+};
+
+export const buildOrderPayload = (cart, productsData, customerData) => ({
+  channel: "web",
+  source: "ecommerce",
+  customer: {
+    name: customerData.name,
+    phone: customerData.phone,
+    zone: customerData.zone,
+    delivery: customerData.delivery,
+    notes: customerData.notes || ""
+  },
+  items: cart
+    .map((item) => {
+      const product = findProduct(item.id, productsData);
+
+      if (!product) return null;
+
+      return {
+        productId: normalizeProductId(product.id),
+        quantity: item.quantity,
+        title: product.title,
+        unitPrice: product.price
+      };
+    })
+    .filter(Boolean)
+});
+
+export const getOrderErrorMessage = (error) => {
+  const payload = error?.payload;
+
+  if (payload?.code === "ORDER_API_NOT_CONFIGURED") {
+    return "La API de pedidos aun no esta configurada para descontar stock real";
+  }
+
+  if (payload?.code === "INSUFFICIENT_STOCK") {
+    return "El stock cambio mientras armabas el pedido. Revisa cantidades y vuelve a intentar";
+  }
+
+  return payload?.message || error?.message || "No se pudo confirmar el pedido";
+};
+
 export const buildCheckoutMessage = (cart, productsData, WHATSAPP_PHONE, customerData) => {
   const lines = cart
     .map((item) => {
@@ -102,7 +147,7 @@ export const buildCheckoutMessage = (cart, productsData, WHATSAPP_PHONE, custome
   const total = formatCurrency(getCartTotal(cart, productsData));
   const { name, phone, zone, delivery, notes } = customerData;
   return [
-    "Hola CS Baterias y Audio, quiero confirmar este pedido:",
+    `Hola ${BRAND_NAME}, quiero confirmar este pedido:`,
     "",
     ...lines,
     "",

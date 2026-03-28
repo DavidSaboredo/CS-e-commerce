@@ -1,6 +1,6 @@
-# CS Baterias y Audio - E-commerce
+# CS Audio y Baterías - E-commerce
 
-E-commerce estático de Baterías y Audio Automotriz. Sitio web moderno con carrito, filtros, integración con API en vivo y checkout vía WhatsApp.
+E-commerce estatico de Baterias y Audio Automotriz. Sitio web moderno con carrito, filtros, integracion con API en vivo y checkout via WhatsApp.
 
 ## 🎯 Características
 
@@ -28,6 +28,8 @@ E-commerce estático de Baterías y Audio Automotriz. Sitio web moderno con carr
 │   ├── products.js         # Datos locales de fallback
 │   ├── main.js             # Lógica de Home
 │   └── catalog.js          # Lógica de Catálogo
+├── api/
+│   └── orders.js           # Proxy serverless para confirmar pedido y descontar stock
 ├── img/
 │   ├── logo-2.png
 │   ├── logo-3.png
@@ -143,10 +145,26 @@ vercel
 3. Selecciona el repo
 4. Deploy automático en cada push
 
-### Configuración en Vercel
-- **Framework**: Static
-- **Build Command**: (vacío)
-- **Output Directory**: . (raíz)
+### Configuracion en Vercel
+- **Framework**: Other
+- **Build Command**: (vacio)
+- **Output Directory**: . (raiz)
+
+### Variables de entorno para descontar stock real
+
+Configura estas variables en Vercel para que `api/orders` pueda registrar ventas en tu backend:
+
+```sh
+ORDER_API_URL=https://tu-backend.com/api/orders
+ORDER_API_KEY=
+ORDER_API_BEARER_TOKEN=
+```
+
+- `ORDER_API_URL`: endpoint real que crea la orden y descuenta stock.
+- `ORDER_API_KEY`: opcional, para backends que usen `x-api-key`.
+- `ORDER_API_BEARER_TOKEN`: opcional, para backends que usen `Authorization: Bearer`.
+
+Sin `ORDER_API_URL`, el frontend no confirmara el pedido y mostrara un error para evitar ventas sin descuento real de stock.
 
 ## 🛠️ Tecnologías
 

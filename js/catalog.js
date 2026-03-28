@@ -1,12 +1,14 @@
 import { catalogProducts } from "./products.js";
-import { fetchAllProducts } from "./api.js";
+import { createOrder, fetchAllProducts } from "./api.js";
 import {
+  BRAND_NAME,
   WHATSAPP_PHONE,
   STORAGE_KEY,
   PAGE_SIZE,
   AUTO_REFRESH_MS
 } from "./config.js";
 import {
+  buildOrderPayload,
   formatCurrency,
   normalizeText,
   loadCart,
@@ -19,7 +21,8 @@ import {
   setCartOpen,
   setCheckoutOpen,
   updateCartBadge,
-  buildCheckoutMessage
+  buildCheckoutMessage,
+  getOrderErrorMessage
 } from "./utils.js";
 
 const catalogGrid = document.querySelector("#catalog-grid");
@@ -57,6 +60,7 @@ let productsData = [...catalogProducts];
 let toastTimer = null;
 let currentPage = 1;
 let isSyncingCatalog = false;
+let isSubmittingCheckout = false;
 
 const state = {
   search: "",
@@ -217,6 +221,17 @@ const updateCartItem = (productId, action) => {
 
 const buildCheckoutMessageLocal = (customerData) =>
   buildCheckoutMessage(cart, productsData, WHATSAPP_PHONE, customerData);
+
+const setCheckoutSubmitting = (isSubmitting) => {
+  if (!checkoutForm) return;
+
+  const submitButton = checkoutForm.querySelector('button[type="submit"]');
+
+  if (!(submitButton instanceof HTMLButtonElement)) return;
+
+  submitButton.disabled = isSubmitting;
+  submitButton.textContent = isSubmitting ? "Confirmando stock..." : "Confirmar por WhatsApp";
+};
 
 const getFilteredProducts = () => {
   const normalizedQuery = normalizeText(state.search.trim());
@@ -496,6 +511,8 @@ checkoutOverlay?.addEventListener("click", () => setCheckoutOpen(false, checkout
 checkoutForm?.addEventListener("submit", (event) => {
   event.preventDefault();
 
+  if (isSubmittingCheckout) return;
+
   if (!(event.target instanceof HTMLFormElement)) return;
 
   const formData = new FormData(event.target);
@@ -512,10 +529,44 @@ checkoutForm?.addEventListener("submit", (event) => {
     return;
   }
 
-  const message = buildCheckoutMessageLocal(customerData);
-  window.open(`https://wa.me/${WHATSAPP_PHONE}?text=${message}`, "_blank", "noreferrer");
-  setCheckoutOpen(false, checkoutModal, checkoutOverlay);
-  event.target.reset();
+  const whatsappWindow = window.open("", "_blank", "noopener,noreferrer");
+
+  const submitOrder = async () => {
+    isSubmittingCheckout = true;
+    setCheckoutSubmitting(true);
+
+    try {
+      await createOrder(buildOrderPayload(cart, productsData, customerData));
+
+      const message = buildCheckoutMessageLocal(customerData);
+      const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${message}`;
+
+      if (whatsappWindow) {
+        whatsappWindow.location.href = whatsappUrl;
+      } else {
+        window.location.href = whatsappUrl;
+      }
+
+      cart = [];
+      renderCart();
+      renderCatalog();
+      setCheckoutOpen(false, checkoutModal, checkoutOverlay);
+      event.target.reset();
+      showToast(`Pedido confirmado con ${BRAND_NAME}`);
+      await syncCatalogFromApi({ silent: true });
+    } catch (error) {
+      if (whatsappWindow && !whatsappWindow.closed) {
+        whatsappWindow.close();
+      }
+
+      showToast(getOrderErrorMessage(error));
+    } finally {
+      isSubmittingCheckout = false;
+      setCheckoutSubmitting(false);
+    }
+  };
+
+  submitOrder();
 });
 
 document.addEventListener("keydown", (event) => {

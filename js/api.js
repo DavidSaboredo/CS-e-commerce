@@ -1,3 +1,5 @@
+import { ORDER_API_ENDPOINT } from "./config.js";
+
 const API_ENDPOINTS = [
   "/api/public/products",
   "https://cs-audio-baterias.vercel.app/api/public/products"
@@ -150,4 +152,40 @@ export const fetchAllProducts = async ({ maxPages = 8, limit = 40, available } =
 
 export const fetchAllAvailableProducts = async ({ maxPages = 8, limit = 40 } = {}) => {
   return fetchAllProducts({ maxPages, limit, available: true });
+};
+
+const parseJsonResponse = async (response) => {
+  const rawText = await response.text();
+
+  if (!rawText) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    return { message: rawText };
+  }
+};
+
+export const createOrder = async (orderPayload) => {
+  const response = await fetch(ORDER_API_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(orderPayload)
+  });
+
+  const payload = await parseJsonResponse(response);
+
+  if (!response.ok) {
+    const error = new Error(payload?.message || `Error ${response.status}`);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
+
+  return payload || { ok: true };
 };
