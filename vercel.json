@@ -1,9 +1,4 @@
 {
-  "buildCommand": "",
-  "outputDirectory": ".",
-  "installCommand": "",
-  "framework": "static",
-  "env": {},
   "rewrites": [
     {
       "source": "/catalog",
