@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CS Baterias y Audio | E-commerce</title>
+    <meta
+      name="description"
+      content="Tienda e-commerce de baterias y audio automotriz con catalogo, promociones y stock en vivo."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Teko:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="topbar">
+        <a class="logo" href="#home" aria-label="CS Baterias y Audio">
+          <img class="logo-image" src="img/logo-2.png" alt="Logo CS Baterias y Audio" />
+          <span class="logo-text">
+            <strong>CS BATERIAS</strong>
+            <span>Y AUDIO</span>
+          </span>
+        </a>
+
+        <button class="menu-btn" id="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false">
+          ☰
+        </button>
+
+        <nav class="nav-links" id="main-nav" aria-label="Navegacion principal">
+          <a href="#home" class="active" data-nav-target="home">Tienda</a>
+          <a href="catalog.html">Catalogo</a>
+          <a href="#featured-products" data-nav-target="featured-products">Novedades</a>
+          <a href="#footer-info" data-nav-target="footer-info">Nosotros</a>
+        </nav>
+
+        <div class="topbar-actions">
+          <label class="search-box" for="search-input">
+            <input id="search-input" type="search" placeholder="Buscar equipo de audio..." />
+            <button id="search-button" type="button" aria-label="Buscar">🔍</button>
+          </label>
+          <button
+            class="cart-btn"
+            id="open-cart"
+            type="button"
+            aria-label="Abrir carrito"
+            aria-expanded="false"
+            aria-controls="cart-panel"
+          >
+            🛒
+            <span class="badge" id="cart-count">0</span>
+          </button>
+        </div>
+      </header>
+
+      <main id="home">
+        <section class="hero" aria-label="Hero principal">
+          <div class="hero-overlay"></div>
+          <div class="hero-content">
+            <p class="eyebrow">Audio Performance Series</p>
+            <h1>Sube la potencia.<br />Haz que el bajo se sienta.</h1>
+            <p class="hero-copy">
+              Catálogo especializado para sonido automotriz: subwoofers, amplificadores,
+              tweeters y kits de instalación listos para entrega.
+            </p>
+            <button class="cta-btn" id="featured-cta" type="button">Comprar destacados</button>
+          </div>
+        </section>
+
+        <section class="highlights" id="featured-products" aria-label="Productos destacados"></section>
+
+        <section class="status-grid" id="store-tools">
+          <article class="inventory-card">
+            <h2>Inventario en vivo</h2>
+            <p class="inventory-subtitle">Conectado al almacen</p>
+            <div class="sync-row">
+              <span class="sync-dot" aria-hidden="true"></span>
+              <div>
+                <strong>Live sync activo</strong>
+                <p id="sync-time">Actualizado: --:--</p>
+              </div>
+            </div>
+            <div class="inventory-metrics">
+              <p><span id="item-count">1432</span> items en stock</p>
+              <p>Ultima sincronizacion: 2 minutos</p>
+            </div>
+          </article>
+        </section>
+      </main>
+
+      <div class="cart-overlay" id="cart-overlay" hidden></div>
+      <aside class="cart-panel" id="cart-panel" aria-hidden="true" aria-label="Carrito de compras">
+        <div class="cart-header">
+          <div>
+            <p class="cart-kicker">Pedido actual</p>
+            <h2>Carrito</h2>
+          </div>
+          <button class="cart-close" id="close-cart" type="button" aria-label="Cerrar carrito">
+            ×
+          </button>
+        </div>
+
+        <div class="cart-items" id="cart-items"></div>
+
+        <div class="cart-footer">
+          <div class="cart-summary-row">
+            <span>Total</span>
+            <strong id="cart-total">ARS 0,00</strong>
+          </div>
+          <div class="cart-actions">
+            <button class="secondary-btn" id="clear-cart" type="button">Vaciar carrito</button>
+            <button class="primary-btn" id="checkout-btn" type="button">Finalizar pedido</button>
+          </div>
+        </div>
+      </aside>
+
+      <div class="checkout-overlay" id="checkout-overlay" hidden></div>
+      <section class="checkout-modal" id="checkout-modal" aria-hidden="true" aria-label="Datos para finalizar pedido">
+        <div class="checkout-header">
+          <h2>Finalizar pedido</h2>
+          <button class="cart-close" id="checkout-close" type="button" aria-label="Cerrar checkout">×</button>
+        </div>
+        <form class="checkout-form" id="checkout-form">
+          <label>
+            Nombre y apellido
+            <input id="customer-name" name="customerName" type="text" required />
+          </label>
+          <label>
+            Telefono
+            <input id="customer-phone" name="customerPhone" type="tel" required />
+          </label>
+          <label>
+            Zona / Ciudad
+            <input id="customer-zone" name="customerZone" type="text" required />
+          </label>
+          <label>
+            Entrega
+            <select id="customer-delivery" name="customerDelivery" required>
+              <option value="">Seleccionar opcion</option>
+              <option value="Retiro en local">Retiro en local</option>
+              <option value="Envio a domicilio">Envio a domicilio</option>
+            </select>
+          </label>
+          <label>
+            Comentarios
+            <textarea id="customer-notes" name="customerNotes" rows="3" placeholder="Ej: horario de contacto, referencias, etc."></textarea>
+          </label>
+          <button class="primary-btn" type="submit">Confirmar por WhatsApp</button>
+        </form>
+      </section>
+
+      <footer class="footer" id="footer-info">
+        <div class="footer-links">
+          <a href="https://wa.me/5493442461830" target="_blank" rel="noreferrer">Contacto</a>
+          <a href="#" id="returns-link">Cambios y devoluciones</a>
+          <details class="support-details">
+            <summary>Soporte tecnico</summary>
+            <div class="support-popup">
+              <a href="https://wa.me/5493442462463" target="_blank" rel="noreferrer">WhatsApp: 3442 462463</a>
+              <a href="mailto:laruzo_da@hotmail.com">laruzo_da@hotmail.com</a>
+            </div>
+          </details>
+        </div>
+        <small>Copyright © 2026 CS Baterias y Audio. Diseno y desarrollo por Laruzo.</small>
+      </footer>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+</html>

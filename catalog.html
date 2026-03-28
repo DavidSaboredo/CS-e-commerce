@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Catalogo | CS Baterias y Audio</title>
+    <meta
+      name="description"
+      content="Catalogo completo de CS Baterias y Audio con filtros por categoria, precio y busqueda."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Teko:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="topbar catalog-topbar">
+        <a class="logo" href="index.html" aria-label="Volver a inicio">
+          <img class="logo-image" src="img/logo-2.png" alt="Logo CS Baterias y Audio" />
+          <span class="logo-text">
+            <strong>CS BATERIAS</strong>
+            <span>Y AUDIO</span>
+          </span>
+        </a>
+
+        <nav class="nav-links" aria-label="Navegacion del catalogo">
+          <a href="index.html">Inicio</a>
+          <a class="active" href="catalog.html">Catalogo</a>
+          <a href="index.html#footer-info">Nosotros</a>
+        </nav>
+
+        <div class="topbar-actions">
+          <label class="search-box" for="catalog-search-input">
+            <input id="catalog-search-input" type="search" placeholder="Buscar bateria, subwoofer, marca..." />
+            <button id="catalog-search-button" type="button" aria-label="Buscar">🔍</button>
+          </label>
+          <button
+            class="cart-btn"
+            id="catalog-open-cart"
+            type="button"
+            aria-label="Abrir carrito"
+            aria-expanded="false"
+            aria-controls="catalog-cart-panel"
+          >
+            🛒
+            <span class="badge" id="catalog-cart-count">0</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="catalog-main">
+        <section class="catalog-hero">
+          <p class="eyebrow">Catalogo Completo</p>
+          <h1>Encuentra el equipo ideal para tu instalacion</h1>
+          <p>
+            Filtra por categoria, rango de precio o busca por nombre para armar pedidos mas rapido.
+          </p>
+        </section>
+
+        <section class="catalog-filters" aria-label="Filtros de catalogo">
+          <label>
+            Categoria
+            <select id="filter-category"></select>
+          </label>
+
+          <label>
+            Ordenar por
+            <select id="filter-sort">
+              <option value="relevance">Relevancia</option>
+              <option value="price-asc">Precio: menor a mayor</option>
+              <option value="price-desc">Precio: mayor a menor</option>
+              <option value="name-asc">Nombre A-Z</option>
+            </select>
+          </label>
+
+          <label>
+            Precio minimo
+            <input id="filter-min-price" type="number" min="0" step="1" placeholder="0" />
+          </label>
+
+          <label>
+            Precio maximo
+            <input id="filter-max-price" type="number" min="0" step="1" placeholder="1000" />
+          </label>
+
+          <button class="secondary-btn" id="clear-filters" type="button">Limpiar filtros</button>
+        </section>
+
+        <section class="catalog-results-head">
+          <p id="catalog-results-count">0 productos</p>
+        </section>
+
+        <section class="catalog-grid" id="catalog-grid" aria-label="Listado de productos"></section>
+
+        <section class="catalog-pagination" aria-label="Paginacion del catalogo">
+          <button class="secondary-btn" id="page-prev" type="button">Anterior</button>
+          <div class="page-numbers" id="page-numbers"></div>
+          <button class="secondary-btn" id="page-next" type="button">Siguiente</button>
+        </section>
+      </main>
+
+      <div class="cart-overlay" id="catalog-cart-overlay" hidden></div>
+      <aside
+        class="cart-panel"
+        id="catalog-cart-panel"
+        aria-hidden="true"
+        aria-label="Carrito de compras"
+      >
+        <div class="cart-header">
+          <div>
+            <p class="cart-kicker">Pedido actual</p>
+            <h2>Carrito</h2>
+          </div>
+          <button
+            class="cart-close"
+            id="catalog-close-cart"
+            type="button"
+            aria-label="Cerrar carrito"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="cart-items" id="catalog-cart-items"></div>
+
+        <div class="cart-footer">
+          <div class="cart-summary-row">
+            <span>Total</span>
+            <strong id="catalog-cart-total">ARS 0,00</strong>
+          </div>
+          <div class="cart-actions">
+            <button class="secondary-btn" id="catalog-clear-cart" type="button">Vaciar carrito</button>
+            <button class="primary-btn" id="catalog-checkout-btn" type="button">Finalizar pedido</button>
+          </div>
+        </div>
+      </aside>
+
+      <div class="checkout-overlay" id="catalog-checkout-overlay" hidden></div>
+      <section
+        class="checkout-modal"
+        id="catalog-checkout-modal"
+        aria-hidden="true"
+        aria-label="Datos para finalizar pedido"
+      >
+        <div class="checkout-header">
+          <h2>Finalizar pedido</h2>
+          <button class="cart-close" id="catalog-checkout-close" type="button" aria-label="Cerrar checkout">×</button>
+        </div>
+        <form class="checkout-form" id="catalog-checkout-form">
+          <label>
+            Nombre y apellido
+            <input id="catalog-customer-name" name="customerName" type="text" required />
+          </label>
+          <label>
+            Telefono
+            <input id="catalog-customer-phone" name="customerPhone" type="tel" required />
+          </label>
+          <label>
+            Zona / Ciudad
+            <input id="catalog-customer-zone" name="customerZone" type="text" required />
+          </label>
+          <label>
+            Entrega
+            <select id="catalog-customer-delivery" name="customerDelivery" required>
+              <option value="">Seleccionar opcion</option>
+              <option value="Retiro en local">Retiro en local</option>
+              <option value="Envio a domicilio">Envio a domicilio</option>
+            </select>
+          </label>
+          <label>
+            Comentarios
+            <textarea
+              id="catalog-customer-notes"
+              name="customerNotes"
+              rows="3"
+              placeholder="Ej: horario de contacto, referencias, etc."
+            ></textarea>
+          </label>
+          <button class="primary-btn" type="submit">Confirmar por WhatsApp</button>
+        </form>
+      </section>
+
+      <footer class="footer">
+        <div class="footer-links">
+          <a href="index.html">Volver al inicio</a>
+          <a href="https://wa.me/5493442461830" target="_blank" rel="noreferrer">Contacto</a>
+          <details class="support-details">
+            <summary>Soporte tecnico</summary>
+            <div class="support-popup">
+              <a href="https://wa.me/5493442462463" target="_blank" rel="noreferrer">WhatsApp: 3442 462463</a>
+              <a href="mailto:laruzo_da@hotmail.com">laruzo_da@hotmail.com</a>
+            </div>
+          </details>
+        </div>
+        <small>Copyright © 2026 CS Baterias y Audio. Diseno y desarrollo por Laruzo.</small>
+      </footer>
+
+      <div class="toast" id="catalog-toast" role="status" aria-live="polite"></div>
+    </div>
+
+    <script type="module" src="js/catalog.js"></script>
+  </body>
+</html>
