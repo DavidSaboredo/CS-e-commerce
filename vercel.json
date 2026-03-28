@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/public/products",
+      "destination": "https://cs-audio-baterias.vercel.app/api/public/products"
+    },
+    {
       "source": "/catalog",
       "destination": "/catalog.html"
     }

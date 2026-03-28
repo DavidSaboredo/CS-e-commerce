@@ -1,4 +1,7 @@
-const PUBLIC_PRODUCTS_API = "https://cs-audio-baterias.vercel.app/api/public/products";
+const API_ENDPOINTS = [
+  "/api/public/products",
+  "https://cs-audio-baterias.vercel.app/api/public/products"
+];
 
 const extractProductsArray = (payload) => {
   if (Array.isArray(payload)) return payload;
@@ -82,26 +85,39 @@ const fetchProductsPage = async ({ search = "", available, page = 1, limit = 20 
   if (page) params.set("page", String(page));
   if (limit) params.set("limit", String(limit));
 
-  const endpoint = `${PUBLIC_PRODUCTS_API}?${params.toString()}`;
+  const query = params.toString();
+  const endpointCandidates = API_ENDPOINTS.map((baseUrl) =>
+    query ? `${baseUrl}?${query}` : baseUrl
+  );
 
-  const response = await fetch(endpoint, {
-    method: "GET",
-    headers: {
-      Accept: "application/json"
+  let lastError = null;
+
+  for (const endpoint of endpointCandidates) {
+    try {
+      const response = await fetch(endpoint, {
+        method: "GET",
+        headers: {
+          Accept: "application/json"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const products = extractProductsArray(payload).map(normalizeProduct);
+
+      return {
+        products,
+        payload
+      };
+    } catch (error) {
+      lastError = error;
     }
-  });
-
-  if (!response.ok) {
-    throw new Error(`API error ${response.status}`);
   }
 
-  const payload = await response.json();
-  const products = extractProductsArray(payload).map(normalizeProduct);
-
-  return {
-    products,
-    payload
-  };
+  throw lastError || new Error("No se pudo obtener el catalogo desde la API");
 };
 
 export const listPublicProducts = async (options = {}) => {
