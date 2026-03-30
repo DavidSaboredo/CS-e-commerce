@@ -366,11 +366,7 @@ const setCheckoutSubmitting = (isSubmitting) => {
 };
 
 const redirectToWhatsApp = (url) => {
-  const popup = window.open(url, "_blank", "noopener,noreferrer");
-
-  if (!popup || popup.closed || typeof popup.closed === "undefined") {
-    window.location.href = url;
-  }
+  window.location.href = url;
 };
 
 mainNav?.addEventListener("click", (event) => {
