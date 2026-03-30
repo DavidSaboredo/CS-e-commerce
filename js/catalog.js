@@ -541,7 +541,7 @@ contactWhatsAppButton?.addEventListener("click", () => {
     cartTotal: getCartTotal(cart, productsData)
   });
 
-  window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  redirectToWhatsApp(whatsappUrl);
 });
 
 checkoutClose?.addEventListener("click", () =>
