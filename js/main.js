@@ -1,11 +1,6 @@
 import { featuredProducts } from "./products.js";
-import { createOrder, listPublicProducts } from "./api.js";
-import {
-  BRAND_NAME,
-  WHATSAPP_PHONE,
-  STORAGE_KEY,
-  AUTO_REFRESH_MS
-} from "./config.js";
+import { createOrder, fetchAllProducts } from "./api.js";
+import { BRAND_NAME, WHATSAPP_PHONE, AUTO_REFRESH_MS } from "./config.js";
 import {
   buildOrderPayload,
   formatCurrency,
@@ -21,8 +16,11 @@ import {
   setCheckoutOpen,
   updateCartBadge,
   buildCheckoutMessage,
+  buildAssistedCheckoutMessage,
+  buildConsultationMessage,
   getOrderErrorMessage
 } from "./utils.js";
+import { trackEvent } from "./analytics.js";
 
 const featuredProductsContainer = document.querySelector("#featured-products");
 const syncTime = document.querySelector("#sync-time");
@@ -40,6 +38,7 @@ const cartOverlay = document.querySelector("#cart-overlay");
 const closeCartButton = document.querySelector("#close-cart");
 const clearCartButton = document.querySelector("#clear-cart");
 const checkoutButton = document.querySelector("#checkout-btn");
+const contactWhatsAppButton = document.querySelector("#contact-whatsapp-btn");
 const cartItemsContainer = document.querySelector("#cart-items");
 const cartTotal = document.querySelector("#cart-total");
 const featuredCta = document.querySelector("#featured-cta");
@@ -235,6 +234,7 @@ const addToCart = (productId) => {
   renderCart();
   renderProducts();
   setCartOpen(true, cartPanel, cartOverlay, cartButton);
+  trackEvent("add_to_cart", { productId });
   showToast(`${product.title} agregado al carrito`);
 };
 
@@ -299,12 +299,30 @@ const randomStock = () => {
   itemCount.textContent = (base + variance).toLocaleString("es-AR");
 };
 
+const getProductsSyncErrorMessage = (error) => {
+  const code = error?.payload?.code;
+
+  if (code === "PRODUCTS_API_NOT_CONFIGURED") {
+    return "Stock online no configurado: falta API key en Vercel";
+  }
+
+  if (error?.status === 401 || error?.status === 403) {
+    return "Stock online no autorizado: revisa credenciales de la API";
+  }
+
+  if (code === "PRODUCTS_API_UNREACHABLE") {
+    return "No se pudo conectar con la API de stock";
+  }
+
+  return "Usando catalogo local temporalmente";
+};
+
 const syncProductsFromApi = async ({ silent = false } = {}) => {
   if (isSyncingProducts) return;
   isSyncingProducts = true;
 
   try {
-    const apiProducts = await listPublicProducts({ limit: 60 });
+    const apiProducts = await fetchAllProducts({ maxPages: 50, limit: 40 });
 
     if (apiProducts.length === 0) {
       isSyncingProducts = false;
@@ -318,9 +336,9 @@ const syncProductsFromApi = async ({ silent = false } = {}) => {
     if (!silent) {
       showToast("Catalogo actualizado con stock online");
     }
-  } catch {
+  } catch (error) {
     if (!silent) {
-      showToast("Usando catalogo local temporalmente");
+      showToast(getProductsSyncErrorMessage(error));
     }
   } finally {
     isSyncingProducts = false;
@@ -411,8 +429,12 @@ cartButton?.addEventListener("click", () => {
   setCartOpen(!isOpen, cartPanel, cartOverlay, cartButton);
 });
 
-closeCartButton?.addEventListener("click", () => setCartOpen(false, cartPanel, cartOverlay, cartButton));
-cartOverlay?.addEventListener("click", () => setCartOpen(false, cartPanel, cartOverlay, cartButton));
+closeCartButton?.addEventListener("click", () =>
+  setCartOpen(false, cartPanel, cartOverlay, cartButton)
+);
+cartOverlay?.addEventListener("click", () =>
+  setCartOpen(false, cartPanel, cartOverlay, cartButton)
+);
 clearCartButton?.addEventListener("click", () => {
   cart = [];
   renderCart();
@@ -422,11 +444,32 @@ clearCartButton?.addEventListener("click", () => {
 
 checkoutButton?.addEventListener("click", () => {
   if (cart.length === 0) return;
+  trackEvent("checkout_started", {
+    itemCount: getCartQuantity(cart),
+    cartTotal: getCartTotal(cart, productsData)
+  });
   setCheckoutOpen(true, checkoutModal, checkoutOverlay);
 });
 
-checkoutClose?.addEventListener("click", () => setCheckoutOpen(false, checkoutModal, checkoutOverlay));
-checkoutOverlay?.addEventListener("click", () => setCheckoutOpen(false, checkoutModal, checkoutOverlay));
+contactWhatsAppButton?.addEventListener("click", () => {
+  const message = buildConsultationMessage(cart, productsData, WHATSAPP_PHONE);
+  const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${message}`;
+
+  trackEvent("whatsapp_contact_requested", {
+    context: "home_cart",
+    itemCount: getCartQuantity(cart),
+    cartTotal: getCartTotal(cart, productsData)
+  });
+
+  window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+});
+
+checkoutClose?.addEventListener("click", () =>
+  setCheckoutOpen(false, checkoutModal, checkoutOverlay)
+);
+checkoutOverlay?.addEventListener("click", () =>
+  setCheckoutOpen(false, checkoutModal, checkoutOverlay)
+);
 
 checkoutForm?.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -460,6 +503,11 @@ checkoutForm?.addEventListener("submit", (event) => {
 
       const message = buildCheckoutMessageLocal(customerData);
       const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${message}`;
+      trackEvent("checkout_confirmed", {
+        itemCount: getCartQuantity(cart),
+        cartTotal: getCartTotal(cart, productsData)
+      });
+      trackEvent("whatsapp_checkout_redirect", { mode: "confirm" });
 
       if (whatsappWindow) {
         whatsappWindow.location.href = whatsappUrl;
@@ -475,11 +523,26 @@ checkoutForm?.addEventListener("submit", (event) => {
       showToast(`Pedido confirmado con ${BRAND_NAME}`);
       await syncProductsFromApi({ silent: true });
     } catch (error) {
-      if (whatsappWindow && !whatsappWindow.closed) {
-        whatsappWindow.close();
+      const assistedMessage = buildAssistedCheckoutMessage(
+        cart,
+        productsData,
+        WHATSAPP_PHONE,
+        customerData
+      );
+      const assistedUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${assistedMessage}`;
+
+      trackEvent("checkout_failed", {
+        reason: error?.payload?.code || error?.message || "unknown"
+      });
+      trackEvent("whatsapp_checkout_redirect", { mode: "assist" });
+
+      if (whatsappWindow) {
+        whatsappWindow.location.href = assistedUrl;
+      } else {
+        window.location.href = assistedUrl;
       }
 
-      showToast(getOrderErrorMessage(error));
+      showToast(`${getOrderErrorMessage(error)}. Te abrimos WhatsApp para seguir el pedido.`);
     } finally {
       isSubmittingCheckout = false;
       setCheckoutSubmitting(false);

@@ -166,6 +166,22 @@ ORDER_API_BEARER_TOKEN=
 
 Sin `ORDER_API_URL`, el frontend no confirmara el pedido y mostrara un error para evitar ventas sin descuento real de stock.
 
+### Variables de entorno para leer catalogo protegido
+
+Si tu endpoint de productos requiere autenticacion (API key/Bearer), configura en Vercel:
+
+```sh
+PRODUCTS_API_URL=https://cs-audio-baterias.vercel.app/api/public/products
+PRODUCTS_API_KEY=tu_api_key
+PRODUCTS_API_BEARER_TOKEN=
+```
+
+- `PRODUCTS_API_URL`: endpoint remoto de productos.
+- `PRODUCTS_API_KEY`: opcional, para autenticacion via `x-api-key`.
+- `PRODUCTS_API_BEARER_TOKEN`: opcional, para autenticacion Bearer.
+
+El frontend consulta primero `api/catalog-products` (proxy serverless del proyecto), asi no expone credenciales en el navegador y puede paginar todo el stock.
+
 ## 🛠️ Tecnologías
 
 - **HTML5** — Semántico y accesible (ARIA labels)

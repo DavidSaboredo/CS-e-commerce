@@ -1,12 +1,6 @@
 import { catalogProducts } from "./products.js";
 import { createOrder, fetchAllProducts } from "./api.js";
-import {
-  BRAND_NAME,
-  WHATSAPP_PHONE,
-  STORAGE_KEY,
-  PAGE_SIZE,
-  AUTO_REFRESH_MS
-} from "./config.js";
+import { BRAND_NAME, WHATSAPP_PHONE, AUTO_REFRESH_MS } from "./config.js";
 import {
   buildOrderPayload,
   formatCurrency,
@@ -22,8 +16,11 @@ import {
   setCheckoutOpen,
   updateCartBadge,
   buildCheckoutMessage,
+  buildAssistedCheckoutMessage,
+  buildConsultationMessage,
   getOrderErrorMessage
 } from "./utils.js";
+import { trackEvent } from "./analytics.js";
 
 const catalogGrid = document.querySelector("#catalog-grid");
 const resultsCount = document.querySelector("#catalog-results-count");
@@ -46,6 +43,7 @@ const cartOverlay = document.querySelector("#catalog-cart-overlay");
 const closeCartButton = document.querySelector("#catalog-close-cart");
 const clearCartButton = document.querySelector("#catalog-clear-cart");
 const checkoutButton = document.querySelector("#catalog-checkout-btn");
+const contactWhatsAppButton = document.querySelector("#catalog-contact-whatsapp-btn");
 const cartItemsContainer = document.querySelector("#catalog-cart-items");
 const cartTotal = document.querySelector("#catalog-cart-total");
 
@@ -117,19 +115,19 @@ const renderCart = () => {
         if (!product) return "";
 
         return `
-          <article class=\"cart-item\">
-            <div class=\"cart-item-copy\">
+          <article class="cart-item">
+            <div class="cart-item-copy">
               <h3>${product.title}</h3>
               <p>${product.subtitle}</p>
               <strong>${formatCurrency(product.price)}</strong>
             </div>
-            <div class=\"cart-item-controls\">
-              <div class=\"quantity-control\">
-                <button type=\"button\" data-cart-action=\"decrease\" data-product-id=\"${product.id}\">−</button>
+            <div class="cart-item-controls">
+              <div class="quantity-control">
+                <button type="button" data-cart-action="decrease" data-product-id="${product.id}">−</button>
                 <span>${item.quantity}</span>
-                <button type=\"button\" data-cart-action=\"increase\" data-product-id=\"${product.id}\">+</button>
+                <button type="button" data-cart-action="increase" data-product-id="${product.id}">+</button>
               </div>
-              <button class=\"remove-btn\" type=\"button\" data-cart-action=\"remove\" data-product-id=\"${product.id}\">
+              <button class="remove-btn" type="button" data-cart-action="remove" data-product-id="${product.id}">
                 Quitar
               </button>
             </div>
@@ -173,6 +171,7 @@ const addToCart = (productId) => {
   renderCart();
   renderCatalog();
   setCartOpen(true, cartPanel, cartOverlay, cartButton);
+  trackEvent("add_to_cart", { productId, context: "catalog" });
 
   showToast(`${product.title} agregado al carrito`);
 };
@@ -240,7 +239,9 @@ const getFilteredProducts = () => {
 
   let filtered = productsData.filter((product) => {
     const matchesCategory = state.category === "Todos" || product.category === state.category;
-    const searchableText = normalizeText(`${product.title} ${product.subtitle} ${product.category}`);
+    const searchableText = normalizeText(
+      `${product.title} ${product.subtitle} ${product.category}`
+    );
     const matchesSearch = normalizedQuery.length === 0 || searchableText.includes(normalizedQuery);
     const matchesMin = minPrice === null || product.price >= minPrice;
     const matchesMax = maxPrice === null || product.price <= maxPrice;
@@ -260,25 +261,24 @@ const getFilteredProducts = () => {
 };
 
 const getPagedProducts = (products) => {
-  const totalPages = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
-  currentPage = Math.min(currentPage, totalPages);
-  const start = (currentPage - 1) * PAGE_SIZE;
   return {
-    totalPages,
-    items: products.slice(start, start + PAGE_SIZE)
+    totalPages: 1,
+    items: products
   };
 };
 
-const renderPagination = (totalPages) => {
+const renderPagination = (_totalPages) => {
   if (!pageNumbers || !pagePrev || !pageNext) return;
 
-  pageNumbers.innerHTML = Array.from({ length: totalPages }, (_, index) => {
-    const page = index + 1;
-    return `<button type="button" class="page-btn ${page === currentPage ? "is-active" : ""}" data-page="${page}">${page}</button>`;
-  }).join("");
+  const paginationSection = pageNumbers.closest(".catalog-pagination");
+  if (paginationSection) {
+    paginationSection.hidden = true;
+  }
 
-  pagePrev.disabled = currentPage === 1;
-  pageNext.disabled = currentPage === totalPages;
+  pageNumbers.innerHTML = "";
+
+  pagePrev.disabled = true;
+  pageNext.disabled = true;
 };
 
 const renderCatalog = () => {
@@ -327,14 +327,8 @@ const renderCatalog = () => {
           <button class="product-action" type="button" data-add-to-cart="${product.id}" ${
             soldOut || limitReached ? "disabled" : ""
           }>
-            ${
-              soldOut
-                ? "Sin stock"
-                : limitReached
-                  ? "Tope en carrito"
-                  : "Agregar al carrito"
-            }
-          </button>, cart
+            ${soldOut ? "Sin stock" : limitReached ? "Tope en carrito" : "Agregar al carrito"}
+          </button>
         </article>
       `;
     })
@@ -352,12 +346,30 @@ const buildCategoryFilter = () => {
     .join("");
 };
 
+const getCatalogSyncErrorMessage = (error) => {
+  const code = error?.payload?.code;
+
+  if (code === "PRODUCTS_API_NOT_CONFIGURED") {
+    return "Stock online no configurado: falta API key en Vercel";
+  }
+
+  if (error?.status === 401 || error?.status === 403) {
+    return "Stock online no autorizado: revisa credenciales de la API";
+  }
+
+  if (code === "PRODUCTS_API_UNREACHABLE") {
+    return "No se pudo conectar con la API de stock";
+  }
+
+  return "Usando catalogo local temporalmente";
+};
+
 const syncCatalogFromApi = async ({ silent = false } = {}) => {
   if (isSyncingCatalog) return;
   isSyncingCatalog = true;
 
   try {
-    const apiProducts = await fetchAllProducts({ maxPages: 8, limit: 40 });
+    const apiProducts = await fetchAllProducts({ maxPages: 50, limit: 40 });
     if (apiProducts.length === 0) {
       isSyncingCatalog = false;
       return;
@@ -381,9 +393,9 @@ const syncCatalogFromApi = async ({ silent = false } = {}) => {
     if (!silent) {
       showToast("Catalogo sincronizado con stock online");
     }
-  } catch {
+  } catch (error) {
     if (!silent) {
-      showToast("Usando catalogo local temporalmente");
+      showToast(getCatalogSyncErrorMessage(error));
     }
   } finally {
     isSyncingCatalog = false;
@@ -490,8 +502,12 @@ cartButton?.addEventListener("click", () => {
   setCartOpen(!isOpen, cartPanel, cartOverlay, cartButton);
 });
 
-closeCartButton?.addEventListener("click", () => setCartOpen(false, cartPanel, cartOverlay, cartButton));
-cartOverlay?.addEventListener("click", () => setCartOpen(false, cartPanel, cartOverlay, cartButton));
+closeCartButton?.addEventListener("click", () =>
+  setCartOpen(false, cartPanel, cartOverlay, cartButton)
+);
+cartOverlay?.addEventListener("click", () =>
+  setCartOpen(false, cartPanel, cartOverlay, cartButton)
+);
 
 clearCartButton?.addEventListener("click", () => {
   cart = [];
@@ -502,11 +518,33 @@ clearCartButton?.addEventListener("click", () => {
 
 checkoutButton?.addEventListener("click", () => {
   if (cart.length === 0) return;
+  trackEvent("checkout_started", {
+    context: "catalog",
+    itemCount: getCartQuantity(cart),
+    cartTotal: getCartTotal(cart, productsData)
+  });
   setCheckoutOpen(true, checkoutModal, checkoutOverlay);
 });
 
-checkoutClose?.addEventListener("click", () => setCheckoutOpen(false, checkoutModal, checkoutOverlay));
-checkoutOverlay?.addEventListener("click", () => setCheckoutOpen(false, checkoutModal, checkoutOverlay));
+contactWhatsAppButton?.addEventListener("click", () => {
+  const message = buildConsultationMessage(cart, productsData, WHATSAPP_PHONE);
+  const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${message}`;
+
+  trackEvent("whatsapp_contact_requested", {
+    context: "catalog_cart",
+    itemCount: getCartQuantity(cart),
+    cartTotal: getCartTotal(cart, productsData)
+  });
+
+  window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+});
+
+checkoutClose?.addEventListener("click", () =>
+  setCheckoutOpen(false, checkoutModal, checkoutOverlay)
+);
+checkoutOverlay?.addEventListener("click", () =>
+  setCheckoutOpen(false, checkoutModal, checkoutOverlay)
+);
 
 checkoutForm?.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -540,6 +578,12 @@ checkoutForm?.addEventListener("submit", (event) => {
 
       const message = buildCheckoutMessageLocal(customerData);
       const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${message}`;
+      trackEvent("checkout_confirmed", {
+        context: "catalog",
+        itemCount: getCartQuantity(cart),
+        cartTotal: getCartTotal(cart, productsData)
+      });
+      trackEvent("whatsapp_checkout_redirect", { mode: "confirm", context: "catalog" });
 
       if (whatsappWindow) {
         whatsappWindow.location.href = whatsappUrl;
@@ -555,11 +599,27 @@ checkoutForm?.addEventListener("submit", (event) => {
       showToast(`Pedido confirmado con ${BRAND_NAME}`);
       await syncCatalogFromApi({ silent: true });
     } catch (error) {
-      if (whatsappWindow && !whatsappWindow.closed) {
-        whatsappWindow.close();
+      const assistedMessage = buildAssistedCheckoutMessage(
+        cart,
+        productsData,
+        WHATSAPP_PHONE,
+        customerData
+      );
+      const assistedUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${assistedMessage}`;
+
+      trackEvent("checkout_failed", {
+        context: "catalog",
+        reason: error?.payload?.code || error?.message || "unknown"
+      });
+      trackEvent("whatsapp_checkout_redirect", { mode: "assist", context: "catalog" });
+
+      if (whatsappWindow) {
+        whatsappWindow.location.href = assistedUrl;
+      } else {
+        window.location.href = assistedUrl;
       }
 
-      showToast(getOrderErrorMessage(error));
+      showToast(`${getOrderErrorMessage(error)}. Te abrimos WhatsApp para seguir el pedido.`);
     } finally {
       isSubmittingCheckout = false;
       setCheckoutSubmitting(false);

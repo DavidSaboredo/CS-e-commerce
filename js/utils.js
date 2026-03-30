@@ -55,8 +55,7 @@ export const getQuantityInCart = (productId, cart = []) => {
   return cart.find((item) => item.id === productId)?.quantity || 0;
 };
 
-export const getCartQuantity = (cart) =>
-  cart.reduce((total, item) => total + item.quantity, 0);
+export const getCartQuantity = (cart) => cart.reduce((total, item) => total + item.quantity, 0);
 
 export const getCartTotal = (cart, productsData) =>
   cart.reduce((total, item) => {
@@ -135,8 +134,8 @@ export const getOrderErrorMessage = (error) => {
   return payload?.message || error?.message || "No se pudo confirmar el pedido";
 };
 
-export const buildCheckoutMessage = (cart, productsData, WHATSAPP_PHONE, customerData) => {
-  const lines = cart
+const getCartMessageLines = (cart, productsData) =>
+  cart
     .map((item) => {
       const product = findProduct(item.id, productsData);
       if (!product) return null;
@@ -144,20 +143,74 @@ export const buildCheckoutMessage = (cart, productsData, WHATSAPP_PHONE, custome
     })
     .filter(Boolean);
 
-  const total = formatCurrency(getCartTotal(cart, productsData));
+const getCustomerMessageLines = (customerData = {}) => {
   const { name, phone, zone, delivery, notes } = customerData;
+
+  return [
+    "Datos del cliente:",
+    `Nombre: ${name || "Sin informar"}`,
+    `Telefono: ${phone || "Sin informar"}`,
+    `Zona/Ciudad: ${zone || "Sin informar"}`,
+    `Entrega: ${delivery || "Sin informar"}`,
+    `Comentarios: ${notes || "Sin comentarios"}`
+  ];
+};
+
+const encodeWhatsAppMessage = (lines) => encodeURIComponent(lines.join("\n"));
+
+const buildWhatsAppMessageByMode = (mode, cart, productsData, customerData) => {
+  const productLines = getCartMessageLines(cart, productsData);
+  const total = formatCurrency(getCartTotal(cart, productsData));
+
+  if (mode === "assist") {
+    return [
+      `Hola ${BRAND_NAME}, no pude confirmar stock automatico y necesito ayuda para cerrar este pedido:`,
+      "",
+      ...(productLines.length > 0 ? productLines : ["- Carrito vacio"]),
+      "",
+      `Total estimado: ${total}`,
+      "",
+      ...getCustomerMessageLines(customerData)
+    ];
+  }
+
+  if (mode === "quote") {
+    return [
+      `Hola ${BRAND_NAME}, quiero asesoria para armar este pedido:`,
+      "",
+      ...(productLines.length > 0 ? productLines : ["- Aun no agregue productos"]),
+      "",
+      `Total estimado: ${total}`,
+      "",
+      ...getCustomerMessageLines(customerData)
+    ];
+  }
+
   return [
     `Hola ${BRAND_NAME}, quiero confirmar este pedido:`,
     "",
-    ...lines,
+    ...productLines,
     "",
     `Total: ${total}`,
     "",
-    "Datos del cliente:",
-    `Nombre: ${name}`,
-    `Telefono: ${phone}`,
-    `Zona/Ciudad: ${zone}`,
-    `Entrega: ${delivery}`,
-    `Comentarios: ${notes || "Sin comentarios"}`
-  ].join("%0A");
+    ...getCustomerMessageLines(customerData)
+  ];
+};
+
+export const buildCheckoutMessage = (cart, productsData, WHATSAPP_PHONE, customerData) => {
+  return encodeWhatsAppMessage(
+    buildWhatsAppMessageByMode("confirm", cart, productsData, customerData)
+  );
+};
+
+export const buildAssistedCheckoutMessage = (cart, productsData, WHATSAPP_PHONE, customerData) => {
+  return encodeWhatsAppMessage(
+    buildWhatsAppMessageByMode("assist", cart, productsData, customerData)
+  );
+};
+
+export const buildConsultationMessage = (cart, productsData, WHATSAPP_PHONE, customerData = {}) => {
+  return encodeWhatsAppMessage(
+    buildWhatsAppMessageByMode("quote", cart, productsData, customerData)
+  );
 };

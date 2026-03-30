@@ -1,9 +1,24 @@
 import { ORDER_API_ENDPOINT } from "./config.js";
 
 const API_ENDPOINTS = [
+  "/api/catalog-products",
   "/api/public/products",
   "https://cs-audio-baterias.vercel.app/api/public/products"
 ];
+
+const parseJsonResponse = async (response) => {
+  const rawText = await response.text();
+
+  if (!rawText) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    return { message: rawText };
+  }
+};
 
 const extractProductsArray = (payload) => {
   if (Array.isArray(payload)) return payload;
@@ -17,6 +32,38 @@ const extractProductsArray = (payload) => {
 const normalizePrice = (value) => {
   const parsed = Number.parseFloat(String(value ?? 0));
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const parsePositiveInt = (value) => {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const getPaginationInfo = (payload) => {
+  const raw = payload?.meta || payload?.pagination || payload?.pageInfo || payload?.pager;
+
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const page = parsePositiveInt(raw.page ?? raw.currentPage ?? raw.pageNumber);
+  const totalPages = parsePositiveInt(raw.totalPages ?? raw.pages ?? raw.lastPage);
+  const limit = parsePositiveInt(raw.limit ?? raw.pageSize ?? raw.perPage);
+  const nextPage = parsePositiveInt(raw.nextPage ?? raw.next);
+  const hasNext =
+    typeof raw.hasNext === "boolean"
+      ? raw.hasNext
+      : typeof raw.hasNextPage === "boolean"
+        ? raw.hasNextPage
+        : null;
+
+  return {
+    page,
+    totalPages,
+    limit,
+    nextPage,
+    hasNext
+  };
 };
 
 const normalizeStock = (value, availableFlag) => {
@@ -61,18 +108,32 @@ const normalizeProduct = (rawProduct, index) => {
     availableFlag
   );
 
+  const fallbackIdSource =
+    rawProduct?.sku ||
+    rawProduct?.code ||
+    rawProduct?.slug ||
+    rawProduct?.displayName ||
+    rawProduct?.title ||
+    rawProduct?.name ||
+    rawProduct?.productName;
+
   return {
-    id: String(rawProduct?.id ?? rawProduct?.productId ?? `api-${index + 1}`),
+    id: String(
+      rawProduct?.id ??
+        rawProduct?.productId ??
+        rawProduct?._id ??
+        rawProduct?.uuid ??
+        rawProduct?.uid ??
+        (fallbackIdSource
+          ? `api-${String(fallbackIdSource).trim().toLowerCase().replace(/\s+/g, "-")}`
+          : `api-${index + 1}`)
+    ),
     title,
     category,
     subtitle: subtitleParts[0] || "Disponible para entrega",
     price: normalizePrice(rawProduct?.price ?? rawProduct?.unitPrice ?? rawProduct?.amount),
     image:
-      rawProduct?.image ||
-      rawProduct?.imageUrl ||
-      rawProduct?.photo ||
-      rawProduct?.thumbnail ||
-      "",
+      rawProduct?.image || rawProduct?.imageUrl || rawProduct?.photo || rawProduct?.thumbnail || "",
     mediaLabel: category,
     stock,
     available: availableFlag || stock > 0
@@ -104,10 +165,14 @@ const fetchProductsPage = async ({ search = "", available, page = 1, limit = 20 
       });
 
       if (!response.ok) {
-        throw new Error(`API error ${response.status}`);
+        const payload = await parseJsonResponse(response);
+        const error = new Error(payload?.message || `API error ${response.status}`);
+        error.status = response.status;
+        error.payload = payload;
+        throw error;
       }
 
-      const payload = await response.json();
+      const payload = await parseJsonResponse(response);
       const products = extractProductsArray(payload).map(normalizeProduct);
 
       return {
@@ -127,19 +192,62 @@ export const listPublicProducts = async (options = {}) => {
   return products;
 };
 
-export const fetchAllProducts = async ({ maxPages = 8, limit = 40, available } = {}) => {
+export const fetchAllProducts = async ({ maxPages = 50, limit = 40, available } = {}) => {
   const allProducts = [];
+  let currentPage = 1;
+  let pageCap = maxPages;
+  let previousPageSignature = "";
 
-  for (let page = 1; page <= maxPages; page += 1) {
-    const { products } = await fetchProductsPage({ available, page, limit });
+  while (currentPage <= pageCap) {
+    const { products, payload } = await fetchProductsPage({
+      available,
+      page: currentPage,
+      limit
+    });
 
     if (products.length === 0) break;
 
     allProducts.push(...products);
 
-    if (products.length < limit) {
+    const currentPageSignature = products
+      .map((product) => String(product.id))
+      .sort()
+      .join("|");
+
+    const pageInfo = getPaginationInfo(payload);
+
+    if (pageInfo?.totalPages) {
+      pageCap = Math.min(maxPages, pageInfo.totalPages);
+    }
+
+    if (pageInfo?.hasNext === false) {
       break;
     }
+
+    if (pageInfo?.nextPage && pageInfo.nextPage > currentPage) {
+      currentPage = pageInfo.nextPage;
+      continue;
+    }
+
+    // Some APIs ignore requested limit and always return a fixed page size (e.g. 16).
+    // Without metadata, continue paging until empty page or repeated page signature.
+    if (!pageInfo && currentPageSignature && currentPageSignature === previousPageSignature) {
+      break;
+    }
+
+    const hasPagingHints = Boolean(
+      pageInfo?.totalPages || pageInfo?.hasNext !== null || pageInfo?.nextPage
+    );
+    const expectedPageSize = pageInfo?.limit || limit;
+
+    if (!hasPagingHints && products.length < expectedPageSize) {
+      previousPageSignature = currentPageSignature;
+      currentPage += 1;
+      continue;
+    }
+
+    previousPageSignature = currentPageSignature;
+    currentPage += 1;
   }
 
   const seen = new Set();
@@ -150,22 +258,8 @@ export const fetchAllProducts = async ({ maxPages = 8, limit = 40, available } =
   });
 };
 
-export const fetchAllAvailableProducts = async ({ maxPages = 8, limit = 40 } = {}) => {
+export const fetchAllAvailableProducts = async ({ maxPages = 50, limit = 40 } = {}) => {
   return fetchAllProducts({ maxPages, limit, available: true });
-};
-
-const parseJsonResponse = async (response) => {
-  const rawText = await response.text();
-
-  if (!rawText) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(rawText);
-  } catch {
-    return { message: rawText };
-  }
 };
 
 export const createOrder = async (orderPayload) => {
