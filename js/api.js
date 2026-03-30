@@ -1,10 +1,6 @@
 import { ORDER_API_ENDPOINT } from "./config.js";
 
-const API_ENDPOINTS = [
-  "/api/catalog-products",
-  "/api/public/products",
-  "https://cs-audio-baterias.vercel.app/api/public/products"
-];
+const API_ENDPOINTS = ["/api/catalog-products"];
 
 const parseJsonResponse = async (response) => {
   const rawText = await response.text();

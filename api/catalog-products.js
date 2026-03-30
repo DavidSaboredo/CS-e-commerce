@@ -70,7 +70,12 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const apiKey = process.env.PRODUCTS_API_KEY || process.env.PUBLIC_PRODUCTS_API_KEY || "";
+  const apiKey =
+    process.env.PRODUCTS_API_KEY ||
+    process.env.PUBLIC_PRODUCTS_API_KEY ||
+    process.env.STOCK_API_KEY ||
+    process.env.ORDER_API_KEY ||
+    "";
   const bearerToken = process.env.PRODUCTS_API_BEARER_TOKEN || "";
 
   if (!apiKey && !bearerToken) {
