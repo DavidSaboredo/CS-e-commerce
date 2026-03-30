@@ -15,6 +15,7 @@ import {
   setCartOpen,
   setCheckoutOpen,
   updateCartBadge,
+  buildWhatsAppLink,
   buildCheckoutMessage,
   buildAssistedCheckoutMessage,
   buildConsultationMessage,
@@ -230,6 +231,14 @@ const setCheckoutSubmitting = (isSubmitting) => {
 
   submitButton.disabled = isSubmitting;
   submitButton.textContent = isSubmitting ? "Confirmando stock..." : "Confirmar por WhatsApp";
+};
+
+const redirectToWhatsApp = (url) => {
+  const popup = window.open(url, "_blank", "noopener,noreferrer");
+
+  if (!popup || popup.closed || typeof popup.closed === "undefined") {
+    window.location.href = url;
+  }
 };
 
 const getFilteredProducts = () => {
@@ -528,7 +537,7 @@ checkoutButton?.addEventListener("click", () => {
 
 contactWhatsAppButton?.addEventListener("click", () => {
   const message = buildConsultationMessage(cart, productsData, WHATSAPP_PHONE);
-  const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${message}`;
+  const whatsappUrl = buildWhatsAppLink(WHATSAPP_PHONE, message);
 
   trackEvent("whatsapp_contact_requested", {
     context: "catalog_cart",
@@ -567,8 +576,6 @@ checkoutForm?.addEventListener("submit", (event) => {
     return;
   }
 
-  const whatsappWindow = window.open("", "_blank", "noopener,noreferrer");
-
   const submitOrder = async () => {
     isSubmittingCheckout = true;
     setCheckoutSubmitting(true);
@@ -577,7 +584,7 @@ checkoutForm?.addEventListener("submit", (event) => {
       await createOrder(buildOrderPayload(cart, productsData, customerData));
 
       const message = buildCheckoutMessageLocal(customerData);
-      const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${message}`;
+      const whatsappUrl = buildWhatsAppLink(WHATSAPP_PHONE, message);
       trackEvent("checkout_confirmed", {
         context: "catalog",
         itemCount: getCartQuantity(cart),
@@ -585,11 +592,7 @@ checkoutForm?.addEventListener("submit", (event) => {
       });
       trackEvent("whatsapp_checkout_redirect", { mode: "confirm", context: "catalog" });
 
-      if (whatsappWindow) {
-        whatsappWindow.location.href = whatsappUrl;
-      } else {
-        window.location.href = whatsappUrl;
-      }
+      redirectToWhatsApp(whatsappUrl);
 
       cart = [];
       renderCart();
@@ -605,7 +608,7 @@ checkoutForm?.addEventListener("submit", (event) => {
         WHATSAPP_PHONE,
         customerData
       );
-      const assistedUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${assistedMessage}`;
+      const assistedUrl = buildWhatsAppLink(WHATSAPP_PHONE, assistedMessage);
 
       trackEvent("checkout_failed", {
         context: "catalog",
@@ -613,11 +616,7 @@ checkoutForm?.addEventListener("submit", (event) => {
       });
       trackEvent("whatsapp_checkout_redirect", { mode: "assist", context: "catalog" });
 
-      if (whatsappWindow) {
-        whatsappWindow.location.href = assistedUrl;
-      } else {
-        window.location.href = assistedUrl;
-      }
+      redirectToWhatsApp(assistedUrl);
 
       showToast(`${getOrderErrorMessage(error)}. Te abrimos WhatsApp para seguir el pedido.`);
     } finally {
