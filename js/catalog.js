@@ -234,7 +234,33 @@ const setCheckoutSubmitting = (isSubmitting) => {
 };
 
 const redirectToWhatsApp = (url) => {
-  window.location.href = url;
+  const match = String(url || "").match(/^https?:\/\/wa\.me\/([^?]+)\?text=(.*)$/i);
+
+  if (!match) {
+    window.location.href = url;
+    return;
+  }
+
+  const [, phone, message] = match;
+  const appUrl = `whatsapp://send?phone=${phone}&text=${message}`;
+  let appOpened = false;
+
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "hidden") {
+      appOpened = true;
+    }
+  };
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  window.location.href = appUrl;
+
+  window.setTimeout(() => {
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+
+    if (!appOpened) {
+      window.location.href = url;
+    }
+  }, 900);
 };
 
 const getFilteredProducts = () => {
