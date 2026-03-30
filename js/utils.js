@@ -161,7 +161,7 @@ const encodeWhatsAppMessage = (lines) => encodeURIComponent(lines.join("\n"));
 export const buildWhatsAppLink = (phone, encodedMessage) => {
   const cleanPhone = String(phone || "").replace(/\D/g, "");
   const message = String(encodedMessage || "");
-  return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${message}`;
+  return `https://wa.me/${cleanPhone}?text=${message}`;
 };
 
 const buildWhatsAppMessageByMode = (mode, cart, productsData, customerData) => {
