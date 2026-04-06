@@ -1,6 +1,17 @@
 import { ORDER_API_ENDPOINT } from "./config.js";
 
 const API_ENDPOINTS = ["/api/catalog-products"];
+const PRODUCTS_CACHE_KEY = "cs-products-cache-v1";
+
+const getStorage = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage;
+};
+
+const getTrimmedString = (value) => (typeof value === "string" ? value.trim() : "");
 
 const parseJsonResponse = async (response) => {
   const rawText = await response.text();
@@ -72,7 +83,81 @@ const normalizeStock = (value, availableFlag) => {
   return availableFlag ? 1 : 0;
 };
 
-const normalizeProduct = (rawProduct, index) => {
+const resolveAssetUrl = (value, assetBaseUrl) => {
+  const trimmedValue = getTrimmedString(value);
+
+  if (!trimmedValue) {
+    return "";
+  }
+
+  if (/^(?:https?:|data:|blob:)/i.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  if (trimmedValue.startsWith("//")) {
+    return `https:${trimmedValue}`;
+  }
+
+  if (!assetBaseUrl) {
+    return trimmedValue;
+  }
+
+  try {
+    return new URL(trimmedValue, assetBaseUrl).href;
+  } catch {
+    return trimmedValue;
+  }
+};
+
+const getImageCandidate = (rawProduct) => {
+  const images = Array.isArray(rawProduct?.images) ? rawProduct.images : [];
+  const gallery = Array.isArray(rawProduct?.gallery) ? rawProduct.gallery : [];
+  const media = Array.isArray(rawProduct?.media)
+    ? rawProduct.media
+    : rawProduct?.media
+      ? [rawProduct.media]
+      : [];
+
+  const firstImage = images[0] || gallery[0] || media[0] || null;
+
+  return (
+    rawProduct?.image ||
+    rawProduct?.imageUrl ||
+    rawProduct?.photo ||
+    rawProduct?.thumbnail ||
+    rawProduct?.picture ||
+    rawProduct?.imageSrc ||
+    rawProduct?.imageURL ||
+    rawProduct?.mediaUrl ||
+    rawProduct?.assetUrl ||
+    rawProduct?.featuredImage?.url ||
+    rawProduct?.featuredImage?.src ||
+    rawProduct?.cover?.url ||
+    rawProduct?.cover?.src ||
+    rawProduct?.asset?.url ||
+    rawProduct?.asset?.src ||
+    firstImage?.url ||
+    firstImage?.src ||
+    firstImage?.imageUrl ||
+    firstImage?.image ||
+    ""
+  );
+};
+
+const getAssetBaseUrl = (payload, responseOrigin) => {
+  const payloadBaseUrl =
+    payload?.meta?.assetBaseUrl ||
+    payload?.meta?.assetsBaseUrl ||
+    payload?.meta?.baseUrl ||
+    payload?.assetBaseUrl ||
+    payload?.assetsBaseUrl ||
+    payload?.baseUrl ||
+    "";
+
+  return getTrimmedString(payloadBaseUrl) || getTrimmedString(responseOrigin);
+};
+
+const normalizeProduct = (rawProduct, index, assetBaseUrl = "") => {
   const availableFlag = Boolean(
     rawProduct?.available ?? rawProduct?.isAvailable ?? rawProduct?.inStock
   );
@@ -128,8 +213,7 @@ const normalizeProduct = (rawProduct, index) => {
     category,
     subtitle: subtitleParts[0] || "Disponible para entrega",
     price: normalizePrice(rawProduct?.price ?? rawProduct?.unitPrice ?? rawProduct?.amount),
-    image:
-      rawProduct?.image || rawProduct?.imageUrl || rawProduct?.photo || rawProduct?.thumbnail || "",
+    image: resolveAssetUrl(getImageCandidate(rawProduct), assetBaseUrl),
     mediaLabel: category,
     stock,
     available: availableFlag || stock > 0
@@ -169,7 +253,10 @@ const fetchProductsPage = async ({ search = "", available, page = 1, limit = 20 
       }
 
       const payload = await parseJsonResponse(response);
-      const products = extractProductsArray(payload).map(normalizeProduct);
+      const assetBaseUrl = getAssetBaseUrl(payload, response.headers.get("x-products-origin"));
+      const products = extractProductsArray(payload).map((product, index) =>
+        normalizeProduct(product, index, assetBaseUrl)
+      );
 
       return {
         products,
@@ -256,6 +343,53 @@ export const fetchAllProducts = async ({ maxPages = 50, limit = 40, available } 
 
 export const fetchAllAvailableProducts = async ({ maxPages = 50, limit = 40 } = {}) => {
   return fetchAllProducts({ maxPages, limit, available: true });
+};
+
+export const loadProductsCache = () => {
+  const storage = getStorage();
+
+  if (!storage) {
+    return [];
+  }
+
+  try {
+    const rawValue = storage.getItem(PRODUCTS_CACHE_KEY);
+
+    if (!rawValue) {
+      return [];
+    }
+
+    const parsed = JSON.parse(rawValue);
+    const products = Array.isArray(parsed) ? parsed : parsed?.products;
+
+    if (!Array.isArray(products)) {
+      return [];
+    }
+
+    return products.map((product, index) => normalizeProduct(product, index));
+  } catch {
+    return [];
+  }
+};
+
+export const saveProductsCache = (products) => {
+  const storage = getStorage();
+
+  if (!storage || !Array.isArray(products) || products.length === 0) {
+    return;
+  }
+
+  try {
+    storage.setItem(
+      PRODUCTS_CACHE_KEY,
+      JSON.stringify({
+        updatedAt: Date.now(),
+        products
+      })
+    );
+  } catch {
+    // Ignore storage quota or privacy mode errors.
+  }
 };
 
 export const createOrder = async (orderPayload) => {

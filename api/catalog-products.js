@@ -52,6 +52,14 @@ const parseJsonResponse = async (response) => {
   }
 };
 
+const getOriginFromUrl = (value) => {
+  try {
+    return new URL(String(value || "")).origin;
+  } catch {
+    return "";
+  }
+};
+
 module.exports = async (req, res) => {
   setCorsHeaders(res);
 
@@ -88,8 +96,13 @@ module.exports = async (req, res) => {
   }
 
   const productsApiUrl = process.env.PRODUCTS_API_URL || DEFAULT_PRODUCTS_API_URL;
+  const productsOrigin = getOriginFromUrl(productsApiUrl);
   const queryParams = buildQueryParams(req.query || {});
   const endpoint = `${productsApiUrl}?${queryParams.toString()}`;
+
+  if (productsOrigin) {
+    res.setHeader("x-products-origin", productsOrigin);
+  }
 
   const headers = {
     Accept: "application/json"

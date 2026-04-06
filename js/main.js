@@ -1,5 +1,5 @@
 import { featuredProducts } from "./products.js";
-import { createOrder, fetchAllProducts } from "./api.js";
+import { createOrder, fetchAllProducts, loadProductsCache, saveProductsCache } from "./api.js";
 import { BRAND_NAME, WHATSAPP_PHONE, AUTO_REFRESH_MS } from "./config.js";
 import {
   buildOrderPayload,
@@ -51,9 +51,11 @@ const checkoutForm = document.querySelector("#checkout-form");
 let cart = loadCart();
 let toastTimer = null;
 let searchTerm = "";
-let productsData = [...featuredProducts];
+const fallbackProducts = [...featuredProducts];
+let productsData = loadProductsCache();
 let isSyncingProducts = false;
 let isSubmittingCheckout = false;
+let isProductsBootstrapping = productsData.length === 0;
 
 const showToast = (message) => {
   if (!toast) return;
@@ -163,10 +165,16 @@ const renderProducts = () => {
   const visibleProducts = getVisibleProducts();
 
   if (visibleProducts.length === 0) {
+    const isLoadingProducts = productsData.length === 0 && (isProductsBootstrapping || isSyncingProducts);
+
     featuredProductsContainer.innerHTML = `
       <article class="empty-results">
-        <h3>Sin resultados</h3>
-        <p>No encontramos productos con ese filtro. Prueba con otra busqueda o categoria.</p>
+        <h3>${isLoadingProducts ? "Cargando productos" : "Sin resultados"}</h3>
+        <p>${
+          isLoadingProducts
+            ? "Estamos trayendo el stock completo y las imagenes del catalogo online."
+            : "No encontramos productos con ese filtro. Prueba con otra busqueda o categoria."
+        }</p>
       </article>
     `;
     return;
@@ -321,23 +329,35 @@ const getProductsSyncErrorMessage = (error) => {
 const syncProductsFromApi = async ({ silent = false } = {}) => {
   if (isSyncingProducts) return;
   isSyncingProducts = true;
+  renderProducts();
 
   try {
     const apiProducts = await fetchAllProducts({ maxPages: 50, limit: 40 });
 
     if (apiProducts.length === 0) {
-      isSyncingProducts = false;
+      isProductsBootstrapping = false;
       return;
     }
 
     productsData = apiProducts;
+    isProductsBootstrapping = false;
+    saveProductsCache(apiProducts);
     renderProducts();
     renderCart();
     randomStock();
+    setSyncTimestamp();
     if (!silent) {
       showToast("Catalogo actualizado con stock online");
     }
   } catch (error) {
+    if (productsData.length === 0) {
+      productsData = [...fallbackProducts];
+      isProductsBootstrapping = false;
+      renderProducts();
+      renderCart();
+      randomStock();
+    }
+
     if (!silent) {
       showToast(getProductsSyncErrorMessage(error));
     }

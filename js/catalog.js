@@ -1,5 +1,5 @@
 import { catalogProducts } from "./products.js";
-import { createOrder, fetchAllProducts } from "./api.js";
+import { createOrder, fetchAllProducts, loadProductsCache, saveProductsCache } from "./api.js";
 import { BRAND_NAME, WHATSAPP_PHONE, AUTO_REFRESH_MS } from "./config.js";
 import {
   buildOrderPayload,
@@ -55,11 +55,13 @@ const checkoutForm = document.querySelector("#catalog-checkout-form");
 const toast = document.querySelector("#catalog-toast");
 
 let cart = loadCart();
-let productsData = [...catalogProducts];
+const fallbackProducts = [...catalogProducts];
+let productsData = loadProductsCache();
 let toastTimer = null;
 let currentPage = 1;
 let isSyncingCatalog = false;
 let isSubmittingCheckout = false;
+let isCatalogBootstrapping = productsData.length === 0;
 
 const state = {
   search: "",
@@ -323,10 +325,16 @@ const renderCatalog = () => {
   }
 
   if (items.length === 0) {
+    const isLoadingCatalog = productsData.length === 0 && (isCatalogBootstrapping || isSyncingCatalog);
+
     catalogGrid.innerHTML = `
       <article class="empty-results">
-        <h3>Sin resultados</h3>
-        <p>No encontramos productos con los filtros actuales.</p>
+        <h3>${isLoadingCatalog ? "Cargando catalogo" : "Sin resultados"}</h3>
+        <p>${
+          isLoadingCatalog
+            ? "Estamos trayendo el stock completo y las imagenes del catalogo online."
+            : "No encontramos productos con los filtros actuales."
+        }</p>
       </article>
     `;
     renderPagination(1);
@@ -398,15 +406,18 @@ const getCatalogSyncErrorMessage = (error) => {
 const syncCatalogFromApi = async ({ silent = false } = {}) => {
   if (isSyncingCatalog) return;
   isSyncingCatalog = true;
+  renderCatalog();
 
   try {
     const apiProducts = await fetchAllProducts({ maxPages: 50, limit: 40 });
     if (apiProducts.length === 0) {
-      isSyncingCatalog = false;
+      isCatalogBootstrapping = false;
       return;
     }
 
     productsData = apiProducts;
+    isCatalogBootstrapping = false;
+    saveProductsCache(apiProducts);
     buildCategoryFilter();
 
     const categoryExists = [...new Set(productsData.map((product) => product.category))].includes(
@@ -425,6 +436,14 @@ const syncCatalogFromApi = async ({ silent = false } = {}) => {
       showToast("Catalogo sincronizado con stock online");
     }
   } catch (error) {
+    if (productsData.length === 0) {
+      productsData = [...fallbackProducts];
+      isCatalogBootstrapping = false;
+      buildCategoryFilter();
+      renderCatalog();
+      renderCart();
+    }
+
     if (!silent) {
       showToast(getCatalogSyncErrorMessage(error));
     }
