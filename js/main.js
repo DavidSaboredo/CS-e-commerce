@@ -627,5 +627,9 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+window.addEventListener("focus", () => {
+  syncProductsFromApi({ silent: true });
+});
+
 setInterval(setSyncTimestamp, 60000);
 setInterval(randomStock, 5000);

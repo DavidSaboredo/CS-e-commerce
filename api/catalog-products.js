@@ -4,6 +4,10 @@ const setCorsHeaders = (res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-api-key");
+  // Always serve fresh catalog data.
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
 };
 
 const sendJson = (res, statusCode, payload) => {
@@ -120,6 +124,7 @@ module.exports = async (req, res) => {
   try {
     upstreamResponse = await fetch(endpoint, {
       method: "GET",
+      cache: "no-store",
       headers
     });
   } catch {

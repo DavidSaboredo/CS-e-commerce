@@ -227,6 +227,8 @@ const fetchProductsPage = async ({ search = "", available, page = 1, limit = 20 
   if (available !== undefined) params.set("available", String(available));
   if (page) params.set("page", String(page));
   if (limit) params.set("limit", String(limit));
+  // Prevent stale browser/CDN cache on catalog sync calls.
+  params.set("_ts", String(Date.now()));
 
   const query = params.toString();
   const endpointCandidates = API_ENDPOINTS.map((baseUrl) =>
@@ -239,8 +241,11 @@ const fetchProductsPage = async ({ search = "", available, page = 1, limit = 20 
     try {
       const response = await fetch(endpoint, {
         method: "GET",
+        cache: "no-store",
         headers: {
-          Accept: "application/json"
+          Accept: "application/json",
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache"
         }
       });
 

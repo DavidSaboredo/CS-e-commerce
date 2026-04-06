@@ -467,6 +467,10 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+window.addEventListener("focus", () => {
+  syncCatalogFromApi({ silent: true });
+});
+
 catalogGrid?.addEventListener("click", (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
