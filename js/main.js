@@ -1,6 +1,6 @@
 import { featuredProducts } from "./products.js";
 import { createOrder, fetchAllProducts, loadProductsCache, saveProductsCache } from "./api.js";
-import { BRAND_NAME, WHATSAPP_PHONE, AUTO_REFRESH_MS } from "./config.js";
+import { BRAND_NAME, WHATSAPP_PHONE, AUTO_REFRESH_MS, ENABLE_ONLINE_STOCK_SYNC } from "./config.js";
 import {
   buildOrderPayload,
   formatCurrency,
@@ -56,6 +56,11 @@ let productsData = loadProductsCache();
 let isSyncingProducts = false;
 let isSubmittingCheckout = false;
 let isProductsBootstrapping = productsData.length === 0;
+
+if (!ENABLE_ONLINE_STOCK_SYNC && productsData.length === 0) {
+  productsData = [...fallbackProducts];
+  isProductsBootstrapping = false;
+}
 
 const showToast = (message) => {
   if (!toast) return;
@@ -165,7 +170,8 @@ const renderProducts = () => {
   const visibleProducts = getVisibleProducts();
 
   if (visibleProducts.length === 0) {
-    const isLoadingProducts = productsData.length === 0 && (isProductsBootstrapping || isSyncingProducts);
+    const isLoadingProducts =
+      productsData.length === 0 && (isProductsBootstrapping || isSyncingProducts);
 
     featuredProductsContainer.innerHTML = `
       <article class="empty-results">
@@ -312,7 +318,7 @@ const getProductsSyncErrorMessage = (error) => {
   const code = error?.payload?.code;
 
   if (code === "PRODUCTS_API_NOT_CONFIGURED") {
-    return "Stock online no configurado: falta API key en Vercel";
+    return "Stock online deshabilitado o no configurado";
   }
 
   if (error?.status === 401 || error?.status === 403) {
@@ -566,7 +572,9 @@ checkoutForm?.addEventListener("submit", (event) => {
       setCheckoutOpen(false, checkoutModal, checkoutOverlay);
       event.target.reset();
       showToast(`Pedido confirmado con ${BRAND_NAME}`);
-      await syncProductsFromApi({ silent: true });
+      if (ENABLE_ONLINE_STOCK_SYNC) {
+        await syncProductsFromApi({ silent: true });
+      }
     } catch (error) {
       const assistedMessage = buildAssistedCheckoutMessage(
         cart,
@@ -615,21 +623,26 @@ renderCart();
 setMenuOpen(false);
 setSyncTimestamp();
 randomStock();
-syncProductsFromApi();
 
-setInterval(() => {
-  syncProductsFromApi({ silent: true });
-}, AUTO_REFRESH_MS);
+if (ENABLE_ONLINE_STOCK_SYNC) {
+  syncProductsFromApi();
 
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
+  setInterval(() => {
     syncProductsFromApi({ silent: true });
-  }
-});
+  }, AUTO_REFRESH_MS);
+}
 
-window.addEventListener("focus", () => {
-  syncProductsFromApi({ silent: true });
-});
+if (ENABLE_ONLINE_STOCK_SYNC) {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      syncProductsFromApi({ silent: true });
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    syncProductsFromApi({ silent: true });
+  });
+}
 
 setInterval(setSyncTimestamp, 60000);
 setInterval(randomStock, 5000);

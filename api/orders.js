@@ -1,6 +1,6 @@
 const { randomUUID } = require("crypto");
 
-const DEFAULT_ORDER_API_URL = "https://cs-audio-baterias.vercel.app/api/orders";
+const DEFAULT_ORDER_API_URL = "";
 const RATE_LIMIT_WINDOW_MS = Number.parseInt(process.env.ORDER_RATE_LIMIT_WINDOW_MS || "60000", 10);
 const RATE_LIMIT_MAX_REQUESTS = Number.parseInt(
   process.env.ORDER_RATE_LIMIT_MAX_REQUESTS || "20",
@@ -281,7 +281,28 @@ module.exports = async (req, res) => {
 
   const payload = validation.payload;
 
+  if (process.env.ENABLE_UPSTREAM_ORDERS !== "true") {
+    logEvent("order_upstream_disabled", { requestId });
+    sendJson(res, 503, {
+      ok: false,
+      message: "La API de pedidos aun no esta configurada para descontar stock real",
+      code: "ORDER_API_NOT_CONFIGURED",
+      requestId
+    });
+    return;
+  }
+
   const orderApiUrl = process.env.ORDER_API_URL || DEFAULT_ORDER_API_URL;
+  if (!orderApiUrl) {
+    logEvent("order_api_not_configured", { requestId });
+    sendJson(res, 503, {
+      ok: false,
+      message: "La API de pedidos aun no esta configurada para descontar stock real",
+      code: "ORDER_API_NOT_CONFIGURED",
+      requestId
+    });
+    return;
+  }
   const headers = {
     Accept: "application/json",
     "Content-Type": "application/json"

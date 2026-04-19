@@ -1,4 +1,4 @@
-const DEFAULT_PRODUCTS_API_URL = "https://cs-audio-baterias.vercel.app/api/public/products";
+const DEFAULT_PRODUCTS_API_URL = "";
 
 const setCorsHeaders = (res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -82,6 +82,15 @@ module.exports = async (req, res) => {
     return;
   }
 
+  if (process.env.ENABLE_UPSTREAM_PRODUCTS !== "true") {
+    sendJson(res, 503, {
+      ok: false,
+      code: "PRODUCTS_API_NOT_CONFIGURED",
+      message: "Stock online deshabilitado"
+    });
+    return;
+  }
+
   const apiKey =
     process.env.PRODUCTS_API_KEY ||
     process.env.PUBLIC_PRODUCTS_API_KEY ||
@@ -100,6 +109,14 @@ module.exports = async (req, res) => {
   }
 
   const productsApiUrl = process.env.PRODUCTS_API_URL || DEFAULT_PRODUCTS_API_URL;
+  if (!productsApiUrl) {
+    sendJson(res, 503, {
+      ok: false,
+      code: "PRODUCTS_API_NOT_CONFIGURED",
+      message: "Falta configurar PRODUCTS_API_URL"
+    });
+    return;
+  }
   const productsOrigin = getOriginFromUrl(productsApiUrl);
   const queryParams = buildQueryParams(req.query || {});
   const endpoint = `${productsApiUrl}?${queryParams.toString()}`;

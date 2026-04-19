@@ -66,6 +66,12 @@ test("rejects invalid payloads", async () => {
 
 test("accepts valid payload and forwards to upstream", async () => {
   const originalFetch = global.fetch;
+  const originalEnableUpstream = process.env.ENABLE_UPSTREAM_ORDERS;
+  const originalOrderApiUrl = process.env.ORDER_API_URL;
+
+  process.env.ENABLE_UPSTREAM_ORDERS = "true";
+  process.env.ORDER_API_URL = "https://example.com/api/orders";
+
   global.fetch = async () => ({
     ok: true,
     status: 200,
@@ -103,6 +109,8 @@ test("accepts valid payload and forwards to upstream", async () => {
   await handler(req, res);
 
   global.fetch = originalFetch;
+  process.env.ENABLE_UPSTREAM_ORDERS = originalEnableUpstream;
+  process.env.ORDER_API_URL = originalOrderApiUrl;
 
   assert.equal(res.statusCode, 200);
   const body = parseBody(res);

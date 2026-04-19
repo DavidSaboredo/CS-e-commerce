@@ -1,6 +1,6 @@
 import { catalogProducts } from "./products.js";
 import { createOrder, fetchAllProducts, loadProductsCache, saveProductsCache } from "./api.js";
-import { BRAND_NAME, WHATSAPP_PHONE, AUTO_REFRESH_MS } from "./config.js";
+import { BRAND_NAME, WHATSAPP_PHONE, AUTO_REFRESH_MS, ENABLE_ONLINE_STOCK_SYNC } from "./config.js";
 import {
   buildOrderPayload,
   formatCurrency,
@@ -62,6 +62,11 @@ let currentPage = 1;
 let isSyncingCatalog = false;
 let isSubmittingCheckout = false;
 let isCatalogBootstrapping = productsData.length === 0;
+
+if (!ENABLE_ONLINE_STOCK_SYNC && productsData.length === 0) {
+  productsData = [...fallbackProducts];
+  isCatalogBootstrapping = false;
+}
 
 const state = {
   search: "",
@@ -325,7 +330,8 @@ const renderCatalog = () => {
   }
 
   if (items.length === 0) {
-    const isLoadingCatalog = productsData.length === 0 && (isCatalogBootstrapping || isSyncingCatalog);
+    const isLoadingCatalog =
+      productsData.length === 0 && (isCatalogBootstrapping || isSyncingCatalog);
 
     catalogGrid.innerHTML = `
       <article class="empty-results">
@@ -389,7 +395,7 @@ const getCatalogSyncErrorMessage = (error) => {
   const code = error?.payload?.code;
 
   if (code === "PRODUCTS_API_NOT_CONFIGURED") {
-    return "Stock online no configurado: falta API key en Vercel";
+    return "Stock online deshabilitado o no configurado";
   }
 
   if (error?.status === 401 || error?.status === 403) {
@@ -455,21 +461,24 @@ const syncCatalogFromApi = async ({ silent = false } = {}) => {
 buildCategoryFilter();
 renderCatalog();
 renderCart();
-syncCatalogFromApi();
 
-setInterval(() => {
-  syncCatalogFromApi({ silent: true });
-}, AUTO_REFRESH_MS);
+if (ENABLE_ONLINE_STOCK_SYNC) {
+  syncCatalogFromApi();
 
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
+  setInterval(() => {
     syncCatalogFromApi({ silent: true });
-  }
-});
+  }, AUTO_REFRESH_MS);
 
-window.addEventListener("focus", () => {
-  syncCatalogFromApi({ silent: true });
-});
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      syncCatalogFromApi({ silent: true });
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    syncCatalogFromApi({ silent: true });
+  });
+}
 
 catalogGrid?.addEventListener("click", (event) => {
   const target = event.target;
@@ -645,7 +654,9 @@ checkoutForm?.addEventListener("submit", (event) => {
       setCheckoutOpen(false, checkoutModal, checkoutOverlay);
       event.target.reset();
       showToast(`Pedido confirmado con ${BRAND_NAME}`);
-      await syncCatalogFromApi({ silent: true });
+      if (ENABLE_ONLINE_STOCK_SYNC) {
+        await syncCatalogFromApi({ silent: true });
+      }
     } catch (error) {
       const assistedMessage = buildAssistedCheckoutMessage(
         cart,
