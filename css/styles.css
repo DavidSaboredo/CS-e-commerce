@@ -204,7 +204,7 @@ a {
   content: "";
   position: absolute;
   inset: 0;
-  background: url("../img/banner.png") left 7% top 12% / cover no-repeat;
+  background: url("../img/banner.jpg") left 7% top 12% / cover no-repeat;
   z-index: 0;
 }
 
