@@ -124,11 +124,11 @@ export const getOrderErrorMessage = (error) => {
   const payload = error?.payload;
 
   if (payload?.code === "ORDER_API_NOT_CONFIGURED") {
-    return "La API de pedidos aun no esta configurada para descontar stock real";
+    return "La API de pedidos aún no está configurada para descontar stock real";
   }
 
   if (payload?.code === "INSUFFICIENT_STOCK") {
-    return "El stock cambio mientras armabas el pedido. Revisa cantidades y vuelve a intentar";
+    return "El stock cambió mientras armabas el pedido. Revisa cantidades y vuelve a intentar";
   }
 
   return payload?.message || error?.message || "No se pudo confirmar el pedido";
@@ -149,7 +149,7 @@ const getCustomerMessageLines = (customerData = {}) => {
   return [
     "Datos del cliente:",
     `Nombre: ${name || "Sin informar"}`,
-    `Telefono: ${phone || "Sin informar"}`,
+    `Teléfono: ${phone || "Sin informar"}`,
     `Zona/Ciudad: ${zone || "Sin informar"}`,
     `Entrega: ${delivery || "Sin informar"}`,
     `Comentarios: ${notes || "Sin comentarios"}`
@@ -182,9 +182,9 @@ const buildWhatsAppMessageByMode = (mode, cart, productsData, customerData) => {
 
   if (mode === "quote") {
     return [
-      `Hola ${BRAND_NAME}, quiero asesoria para armar este pedido:`,
+      `Hola ${BRAND_NAME}, quiero asesoría para armar este pedido:`,
       "",
-      ...(productLines.length > 0 ? productLines : ["- Aun no agregue productos"]),
+      ...(productLines.length > 0 ? productLines : ["- Aún no agregué productos"]),
       "",
       `Total estimado: ${total}`,
       "",

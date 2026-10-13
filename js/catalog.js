@@ -112,7 +112,7 @@ const renderCart = () => {
   if (cart.length === 0) {
     cartItemsContainer.innerHTML = `
       <div class="cart-empty-state">
-        <strong>Tu carrito esta vacio</strong>
+        <strong>Tu carrito está vacío</strong>
         <p>Agrega productos del catalogo para empezar el pedido.</p>
       </div>
     `;
@@ -219,7 +219,7 @@ const updateCartItem = (productId, action) => {
     .filter((item) => item.quantity > 0);
 
   if (blockedByStock) {
-    showToast("No puedes agregar mas unidades, stock agotado");
+    showToast("No puedes agregar más unidades, stock agotado");
   }
 
   renderCart();
@@ -335,10 +335,10 @@ const renderCatalog = () => {
 
     catalogGrid.innerHTML = `
       <article class="empty-results">
-        <h3>${isLoadingCatalog ? "Cargando catalogo" : "Sin resultados"}</h3>
+        <h3>${isLoadingCatalog ? "Cargando catálogo" : "Sin resultados"}</h3>
         <p>${
           isLoadingCatalog
-            ? "Estamos trayendo el stock completo y las imagenes del catalogo online."
+            ? "Estamos trayendo el stock completo y las imágenes del catálogo online."
             : "No encontramos productos con los filtros actuales."
         }</p>
       </article>
@@ -368,7 +368,7 @@ const renderCatalog = () => {
           </div>
           <p class="product-subtitle">${product.subtitle}</p>
           <p class="product-category">${product.category}</p>
-          ${lowStock ? '<p class="product-stock-alert">Ultimas unidades</p>' : ""}
+          ${lowStock ? '<p class="product-stock-alert">Últimas unidades</p>' : ""}
           <button class="product-action" type="button" data-add-to-cart="${product.id}" ${
             soldOut || limitReached ? "disabled" : ""
           }>
@@ -406,7 +406,7 @@ const getCatalogSyncErrorMessage = (error) => {
     return "No se pudo conectar con la API de stock";
   }
 
-  return "Usando catalogo local temporalmente";
+  return "Usando catálogo local temporalmente";
 };
 
 const syncCatalogFromApi = async ({ silent = false } = {}) => {
@@ -439,7 +439,7 @@ const syncCatalogFromApi = async ({ silent = false } = {}) => {
     renderCatalog();
     renderCart();
     if (!silent) {
-      showToast("Catalogo sincronizado con stock online");
+      showToast("Catálogo sincronizado con stock online");
     }
   } catch (error) {
     if (productsData.length === 0) {

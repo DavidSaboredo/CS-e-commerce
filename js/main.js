@@ -115,7 +115,7 @@ const renderCart = () => {
   if (cart.length === 0) {
     cartItemsContainer.innerHTML = `
       <div class="cart-empty-state">
-        <strong>Tu carrito esta vacio</strong>
+        <strong>Tu carrito está vacío</strong>
         <p>Agrega productos destacados para empezar a preparar el pedido.</p>
       </div>
     `;
@@ -178,8 +178,8 @@ const renderProducts = () => {
         <h3>${isLoadingProducts ? "Cargando productos" : "Sin resultados"}</h3>
         <p>${
           isLoadingProducts
-            ? "Estamos trayendo el stock completo y las imagenes del catalogo online."
-            : "No encontramos productos con ese filtro. Prueba con otra busqueda o categoria."
+            ? "Estamos trayendo el stock completo y las imágenes del catálogo online."
+            : "No encontramos productos con ese filtro. Prueba con otra búsqueda o categoría."
         }</p>
       </article>
     `;
@@ -211,7 +211,7 @@ const renderProducts = () => {
           </div>
           <p class="product-subtitle">${product.subtitle}</p>
           <p class="product-category">${product.category}</p>
-          ${lowStock ? '<p class="product-stock-alert">Ultimas unidades</p>' : ""}
+          ${lowStock ? '<p class="product-stock-alert">Últimas unidades</p>' : ""}
           <button class="product-action" type="button" data-add-to-cart="${product.id}" ${
             soldOut || limitReached ? "disabled" : ""
           }>
@@ -288,7 +288,7 @@ const updateCartItem = (productId, action) => {
     .filter((item) => item.quantity > 0);
 
   if (blockedByStock) {
-    showToast("No puedes agregar mas unidades, stock agotado");
+    showToast("No puedes agregar más unidades, stock agotado");
   }
 
   renderCart();
@@ -329,7 +329,7 @@ const getProductsSyncErrorMessage = (error) => {
     return "No se pudo conectar con la API de stock";
   }
 
-  return "Usando catalogo local temporalmente";
+  return "Usando catálogo local temporalmente";
 };
 
 const syncProductsFromApi = async ({ silent = false } = {}) => {
@@ -353,7 +353,7 @@ const syncProductsFromApi = async ({ silent = false } = {}) => {
     randomStock();
     setSyncTimestamp();
     if (!silent) {
-      showToast("Catalogo actualizado con stock online");
+      showToast("Catálogo actualizado con stock online");
     }
   } catch (error) {
     if (productsData.length === 0) {
@@ -607,7 +607,7 @@ featuredCta?.addEventListener("click", () => {
 
 returnsLink?.addEventListener("click", (event) => {
   event.preventDefault();
-  showToast("Cambios y devoluciones: 10 dias corridos con ticket de compra");
+  showToast("Cambios y devoluciones: 10 días corridos con ticket de compra");
 });
 
 document.addEventListener("keydown", (event) => {

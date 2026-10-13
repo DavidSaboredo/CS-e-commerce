@@ -242,8 +242,7 @@ a {
   z-index: 1;
   max-width: 520px;
   padding: 2.2rem;
-  background: linear-gradient(90deg, rgba(10, 12, 18, 0.78), rgba(10, 12, 18, 0.22));
-  backdrop-filter: blur(1.5px);
+  background: linear-gradient(90deg, rgba(10, 12, 18, 0.82), rgba(10, 12, 18, 0.5) 70%, rgba(10, 12, 18, 0));
 }
 
 .eyebrow {
@@ -921,7 +920,7 @@ body.cart-open {
   left: 50%;
   bottom: 1.25rem;
   z-index: 120;
-  transform: translate(-50%, 140%);
+  transform: translate(-50%, calc(100% + 2.5rem));
   min-width: min(90vw, 520px);
   padding: 0.7rem 0.9rem;
   border-radius: 999px;
