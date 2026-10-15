@@ -57,9 +57,12 @@ let isSyncingProducts = false;
 let isSubmittingCheckout = false;
 let isProductsBootstrapping = productsData.length === 0;
 
-if (!ENABLE_ONLINE_STOCK_SYNC && productsData.length === 0) {
+if (!ENABLE_ONLINE_STOCK_SYNC) {
+  // Sin stock online manda el catálogo local (no lo que quedó guardado en el navegador).
   productsData = [...fallbackProducts];
   isProductsBootstrapping = false;
+  // El panel de inventario en vivo solo tiene sentido con la sincronización prendida.
+  document.querySelector("#store-tools")?.remove();
 }
 
 const showToast = (message) => {

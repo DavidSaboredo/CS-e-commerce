@@ -5,7 +5,7 @@ export const formatCurrency = (value) =>
   new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency: "ARS",
-    minimumFractionDigits: 2
+    maximumFractionDigits: 0
   }).format(value);
 
 export const normalizeText = (value) =>

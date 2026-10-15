@@ -378,7 +378,7 @@ a {
 
 .product-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: 0.5rem;
 }
@@ -389,7 +389,7 @@ a {
   line-height: 0.88;
   font-family: "Teko", sans-serif;
   text-transform: uppercase;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .product-price {

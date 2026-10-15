@@ -63,7 +63,8 @@ let isSyncingCatalog = false;
 let isSubmittingCheckout = false;
 let isCatalogBootstrapping = productsData.length === 0;
 
-if (!ENABLE_ONLINE_STOCK_SYNC && productsData.length === 0) {
+if (!ENABLE_ONLINE_STOCK_SYNC) {
+  // Sin stock online manda el catálogo local (no lo que quedó guardado en el navegador).
   productsData = [...fallbackProducts];
   isCatalogBootstrapping = false;
 }
