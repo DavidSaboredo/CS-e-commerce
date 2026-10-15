@@ -217,6 +217,6 @@ MIT License — Libre para usar y modificar.
 
 ---
 
-**Desarrollado por**: Laruzo  
+**Desarrollado por**: laruzo-dev  
 **Última actualización**: Marzo 2026
 
